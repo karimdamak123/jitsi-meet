@@ -1454,4 +1454,11 @@ UI.hideUserMediaPermissionsGuidanceOverlay = function () {
     GumPermissionsOverlay.hide();
 };
 
+/**
+ * Handles user's features changes.
+ */
+UI.onUserFeaturesChanged = function (user) {
+    VideoLayout.onUserFeaturesChanged(user);
+};
+
 module.exports = UI;

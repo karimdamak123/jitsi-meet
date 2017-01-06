@@ -504,11 +504,11 @@ export default {
             }).then(([tracks, con]) => {
                 logger.log('initialized with %s local tracks', tracks.length);
                 APP.connection = connection = con;
+                this.isDesktopSharingEnabled =
+                    JitsiMeetJS.isDesktopSharingEnabled();
                 APP.remoteControl.init();
                 this._bindConnectionFailedHandler(con);
                 this._createRoom(tracks);
-                this.isDesktopSharingEnabled =
-                    JitsiMeetJS.isDesktopSharingEnabled();
 
                 if (UIUtil.isButtonEnabled('contacts'))
                     APP.UI.ContactList = new ContactList(room);
@@ -1006,7 +1006,7 @@ export default {
         let externalInstallation = false;
 
         if (shareScreen) {
-            createLocalTracks({
+            this.screenSharingPromise = createLocalTracks({
                 devices: ['desktop'],
                 desktopSharingExtensionExternalInstallation: {
                     interval: 500,
@@ -1096,7 +1096,9 @@ export default {
             });
         } else {
             APP.remoteControl.receiver.stop();
-            createLocalTracks({ devices: ['video'] }).then(
+            this.screenSharingPromise = createLocalTracks(
+                { devices: ['video'] })
+            .then(
                 ([stream]) => this.useVideoStream(stream)
             ).then(() => {
                 this.videoSwitchInProgress = false;
@@ -1128,6 +1130,8 @@ export default {
             }
         );
 
+        room.on(ConferenceEvents.PARTCIPANT_FEATURES_CHANGED,
+            user => APP.UI.onUserFeaturesChanged(user));
         room.on(ConferenceEvents.USER_JOINED, (id, user) => {
             if (user.isHidden())
                 return;
@@ -1799,6 +1803,7 @@ export default {
      */
     hangup (requestFeedback = false) {
         APP.UI.hideRingOverLay();
+        APP.remoteControl.receiver.enable(false);
         let requestFeedbackPromise = requestFeedback
                 ? APP.UI.requestFeedbackOnHangup()
                 // false - because the thank you dialog shouldn't be displayed
